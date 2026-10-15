@@ -13,3 +13,4 @@ out
 npm-debug.log*
 .DS_Store
 *.pem
+*.tsbuildinfo

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useKioskHeartbeat } from '../lib/heartbeat';
-import { submitTransactionLog, TransactionPayload } from '../lib/api';
+import { submitTransactionLog, TransactionPayload, DuplicateTransactionError } from '../lib/api';
 import { syncDispatcher } from '../lib/queue';
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
   const [pendingCount, setPendingCount] = useState(0);
 
   // Ball's Heartbeat Hook (Story 01)
-  useKioskHeartbeat({ kioskId, intervalMs: 10000 });
+  const { lastPingTime, pingStatus } = useKioskHeartbeat({ kioskId, intervalMs: 10000 });
 
   // Monitor network status & auto-flush offline queue upon reconnection (Story 14-3)
   useEffect(() => {
@@ -50,19 +50,30 @@ export default function Home() {
     };
 
     if (!isOnline) {
-      // Offline fallback: store in local storage queue (Story 14-1)
-      await syncDispatcher.enqueue(recordPayload as TransactionPayload);
+      // Offline fallback: store in local storage queue (Story 14-1) with idempotency check
+      const enqueued = await syncDispatcher.enqueue(recordPayload as TransactionPayload);
       setPendingCount(syncDispatcher.getQueue().length);
-      alert('Offline Mode: Transaction saved to local queue.');
+      if (enqueued) {
+        alert('Offline Mode: Transaction saved to local queue.');
+      } else {
+        alert('Duplicate transaction rejected by client idempotency check.');
+      }
     } else {
       try {
         await submitTransactionLog(recordPayload);
+        syncDispatcher.markProcessed(recordPayload.transaction_id);
         alert('Transaction submitted successfully!');
       } catch (err) {
+        if (err instanceof DuplicateTransactionError) {
+          alert('Duplicate submission detected & rejected by server.');
+          return;
+        }
         // Fallback on network/server drop
-        await syncDispatcher.enqueue(recordPayload as TransactionPayload);
+        const enqueued = await syncDispatcher.enqueue(recordPayload as TransactionPayload);
         setPendingCount(syncDispatcher.getQueue().length);
-        alert('Server unreachable: Cached in local queue.');
+        if (enqueued) {
+          alert('Server unreachable: Cached in local queue.');
+        }
       }
     }
   };
@@ -81,7 +92,7 @@ export default function Home() {
           marginBottom: 20,
         }}
       >
-        Status: <strong>{isOnline ? 'Online' : 'Offline Mode'}</strong> | Pending Queue Items: {pendingCount}
+        Status: <strong>{isOnline ? 'Online' : 'Offline Mode'}</strong> | Pending Queue Items: {pendingCount} | Heartbeat: <strong>{pingStatus === 'ok' ? `Connected (${lastPingTime})` : pingStatus === 'failed' ? 'Failed' : 'Connecting...'}</strong>
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
