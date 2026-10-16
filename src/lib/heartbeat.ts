@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react';
+import {
+  fetchWithRetry,
+  connectionStatus,
+  DEFAULT_RETRY_DELAYS_MS,
+} from './http';
 
 interface HeartbeatOptions {
   kioskId: string;
@@ -10,6 +15,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 
 /**
  * Sends a periodic heartbeat ping to POST /api/heartbeat every 10 seconds.
+ *
+ * The heartbeat is also what detects recovery: once the connection is marked
+ * "dropped", each ping is a single cheap probe (no backoff). The first success
+ * flips the shared status back to "connected", which triggers the queue flush.
  */
 export function useKioskHeartbeat({
   kioskId,
@@ -22,23 +31,36 @@ export function useKioskHeartbeat({
   useEffect(() => {
     if (!kioskId) return;
 
+    const controller = new AbortController();
+    let inFlight = false; // a full retry cycle (~34 s) outlasts the 10 s interval
+
     const sendHeartbeat = async () => {
+      if (inFlight) return;
+
       if (typeof window !== 'undefined' && !window.navigator.onLine) {
         console.warn('[Heartbeat] Offline, skipping ping.');
         setPingStatus('failed');
         return;
       }
 
+      inFlight = true;
       try {
         console.log(`[Heartbeat] Sending ping to ${serverUrl} (kiosk: ${kioskId})...`);
-        const res = await fetch(serverUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            kiosk_id: kioskId,
-            client_timestamp: new Date().toISOString(),
-          }),
-        });
+
+        const alreadyDropped = connectionStatus.get() === 'dropped';
+        const res = await fetchWithRetry(
+          serverUrl,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kiosk_id: kioskId,
+              client_timestamp: new Date().toISOString(),
+            }),
+            signal: controller.signal,
+          },
+          { retryDelaysMs: alreadyDropped ? [] : DEFAULT_RETRY_DELAYS_MS }
+        );
 
         if (res.ok) {
           const data = await res.json().catch(() => null);
@@ -50,14 +72,20 @@ export function useKioskHeartbeat({
           setPingStatus('failed');
         }
       } catch (err) {
+        if (controller.signal.aborted) return; // unmounted
         console.warn('[Heartbeat] Ping failed:', err);
         setPingStatus('failed');
+      } finally {
+        inFlight = false;
       }
     };
 
     sendHeartbeat();
     const timer = setInterval(sendHeartbeat, intervalMs);
-    return () => clearInterval(timer);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
   }, [kioskId, intervalMs, serverUrl]);
 
   return { lastPingTime, pingStatus };

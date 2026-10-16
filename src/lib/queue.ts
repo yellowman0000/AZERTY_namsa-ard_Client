@@ -4,6 +4,7 @@ import {
   CorruptedPayloadError,
   DuplicateTransactionError,
 } from './api';
+import { ConnectionDroppedError } from './http';
 
 const QUEUE_KEY = 'offline_tx_queue';
 const QUARANTINE_KEY = 'quarantine_queue';
@@ -117,7 +118,8 @@ export class OfflineSyncDispatcher {
     let failed = 0;
     let duplicates = 0;
 
-    for (const record of queue) {
+    for (let i = 0; i < queue.length; i++) {
+      const record = queue[i];
       // In-batch idempotency check (reject duplicate entries queued during retries)
       if (seenInBatch.has(record.transaction_id) || this.isProcessed(record.transaction_id)) {
         console.warn(
@@ -143,6 +145,12 @@ export class OfflineSyncDispatcher {
         } else if (error instanceof CorruptedPayloadError) {
           this.quarantine(record);
           quarantined++;
+        } else if (error instanceof ConnectionDroppedError) {
+          // Retries exhausted: stop flushing (each record would burn ~34 s of
+          // retries) and keep this record plus everything after it queued.
+          remainingQueue.push(...queue.slice(i));
+          failed += queue.length - i;
+          break;
         } else {
           // Transient network failure: keep in queue for future retry
           remainingQueue.push(record);

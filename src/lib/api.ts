@@ -1,4 +1,5 @@
 import { generatePayloadHash } from './checksum';
+import { fetchWithRetry } from './http';
 
 export interface TransactionPayload {
   transaction_id: string;
@@ -26,7 +27,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 
 /**
  * Prepares payload with SHA-256 checksum and submits to POST /api/logs
- * Includes idempotency check handling (HTTP 409 Conflict for duplicate retries).
+ *
+ * Network behaviour (see ./http):
+ *  - 5 s timeout per attempt
+ *  - on timeout / network error / 5xx: retry after 2 s, 4 s, 8 s
+ *  - if all attempts fail, throws ConnectionDroppedError
+ *
+ * Idempotency: HTTP 409 means the server already has this transaction_id.
+ * If we had to retry, the earlier attempt most likely reached the server
+ * (e.g. its response timed out), so a 409 on a retry is treated as success.
  */
 export async function submitTransactionLog(
   payload: Omit<TransactionPayload, 'checksum'>,
@@ -43,14 +52,28 @@ export async function submitTransactionLog(
     checksum,
   };
 
-  const response = await fetch(serverUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(finalPayload),
-  });
+  let retried = false;
 
-  // Idempotency: Server rejects duplicate submission from retries
+  const response = await fetchWithRetry(
+    serverUrl,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(finalPayload),
+    },
+    {
+      onRetry: (attempt, delayMs) => {
+        retried = true;
+        console.warn(`[API] Attempt ${attempt} failed, retrying in ${delayMs / 1000}s...`);
+      },
+    }
+  );
+
   if (response.status === 409) {
+    if (retried) {
+      // The first attempt landed; only its response was lost.
+      return { ack: true, status: 'already_recorded' };
+    }
     throw new DuplicateTransactionError(
       `Duplicate transaction rejected: ${payload.transaction_id}`
     );
