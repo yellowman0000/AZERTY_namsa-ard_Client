@@ -54,6 +54,7 @@ export function useKioskHeartbeat({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              kioskId,
               kiosk_id: kioskId,
               client_timestamp: new Date().toISOString(),
             }),

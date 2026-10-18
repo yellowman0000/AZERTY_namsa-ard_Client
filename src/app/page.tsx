@@ -68,10 +68,16 @@ export default function Home() {
     e.preventDefault();
     if (submitting) return;
 
+    const numVolume = Number(volume);
+    if (!Number.isFinite(numVolume) || numVolume <= 0) {
+      alert('Water meter volume must be a positive number greater than 0.');
+      return;
+    }
+
     const recordPayload: Omit<TransactionPayload, 'checksum'> = {
       transaction_id: crypto.randomUUID(),
       kiosk_id: kioskId,
-      meter_volume: Number(volume),
+      meter_volume: numVolume,
       recorded_at: new Date().toISOString(),
     };
 
@@ -135,7 +141,9 @@ export default function Home() {
           <input
             type="number"
             step="0.01"
-            value={volume}
+            min="0.01"
+            placeholder="e.g. 25.50"
+            value={volume || ''}
             onChange={(e) => setVolume(Number(e.target.value))}
             required
             style={{ padding: 8, fontSize: 16 }}
