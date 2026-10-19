@@ -15,7 +15,7 @@ const createRecord = (id: string, vol = 10.0): TransactionPayload => ({
   recorded_at: '2026-10-17T12:00:00.000Z',
 });
 
-describe('Story 14-1: Local queue for consecutive offline transactions (Earn)', () => {
+describe('Story 14-1: Local queue for consecutive offline transactions', () => {
   let storage: MemoryStorage;
   let queue: OfflineQueue<TransactionPayload>;
 
