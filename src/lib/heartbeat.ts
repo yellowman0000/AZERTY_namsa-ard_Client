@@ -11,8 +11,6 @@ interface HeartbeatOptions {
   serverUrl?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-
 /**
  * Sends a periodic heartbeat ping to POST /api/kiosk/heartbeat (fallback /api/heartbeat) every 10 seconds.
  *
@@ -23,7 +21,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 export function useKioskHeartbeat({
   kioskId,
   intervalMs = 10000,
-  serverUrl = `${API_BASE_URL}/api/kiosk/heartbeat`,
+  serverUrl = '/api/kiosk/heartbeat',
 }: HeartbeatOptions) {
   const [lastPingTime, setLastPingTime] = useState<string | null>(null);
   const [pingStatus, setPingStatus] = useState<'idle' | 'ok' | 'failed'>('idle');

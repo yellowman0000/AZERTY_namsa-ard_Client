@@ -1,163 +1,149 @@
 'use client';
 
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useKioskHeartbeat } from '../lib/heartbeat';
-import { submitTransactionLog, TransactionPayload, DuplicateTransactionError } from '../lib/api';
-import { syncDispatcher } from '../lib/queue';
-import { connectionStatus, ConnectionDroppedError } from '../lib/http';
+import { connectionStatus } from '../lib/http';
 
-export default function Home() {
-  const kioskId = 'KIOSK-001';
-  const [isOnline, setIsOnline] = useState(true);
-  const [volume, setVolume] = useState<number>(0);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+const kioskId = process.env.NEXT_PUBLIC_KIOSK_ID || 'KIOSK-001';
 
-  // Live connection state from the retry layer: 'connected' | 'retrying' | 'dropped'
+export default function KioskDashboard() {
+  const [browserOnline, setBrowserOnline] = useState(true);
   const connection = useSyncExternalStore(
     connectionStatus.subscribe,
     connectionStatus.get,
     () => 'connected' as const
   );
+  const { lastPingTime, pingStatus } = useKioskHeartbeat({
+    kioskId,
+    intervalMs: 10000,
+  });
 
-  // Ball's Heartbeat Hook (Story 01)
-  const { lastPingTime, pingStatus } = useKioskHeartbeat({ kioskId, intervalMs: 10000 });
-
-  // Monitor network status & auto-flush offline queue upon reconnection (Story 14-3)
   useEffect(() => {
-    const updateStatus = async () => {
-      const online = typeof window !== 'undefined' ? navigator.onLine : true;
-      setIsOnline(online);
-      setPendingCount(syncDispatcher.getQueue().length);
-
-      if (online) {
-        const res = await syncDispatcher.processQueue();
-        if (res.processed > 0 || res.quarantined > 0) {
-          setPendingCount(syncDispatcher.getQueue().length);
-        }
-      }
-    };
-
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    updateStatus();
-
+    const updateNetworkStatus = () => setBrowserOnline(navigator.onLine);
+    updateNetworkStatus();
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
     return () => {
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
     };
   }, []);
 
-  // Flush the queue when the retry layer reports the connection has recovered.
-  useEffect(() => {
-    if (connection !== 'connected' || !isOnline) return;
-    (async () => {
-      if (syncDispatcher.getQueue().length === 0) return;
-      await syncDispatcher.processQueue();
-      setPendingCount(syncDispatcher.getQueue().length);
-    })();
-  }, [connection, isOnline]);
-
-  const enqueueOffline = async (payload: Omit<TransactionPayload, 'checksum'>, message: string) => {
-    const enqueued = await syncDispatcher.enqueue(payload as TransactionPayload);
-    setPendingCount(syncDispatcher.getQueue().length);
-    alert(enqueued ? message : 'Duplicate transaction rejected by client idempotency check.');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
-
-    const numVolume = Number(volume);
-    if (!Number.isFinite(numVolume) || numVolume <= 0) {
-      alert('Water meter volume must be a positive number greater than 0.');
-      return;
-    }
-
-    const recordPayload: Omit<TransactionPayload, 'checksum'> = {
-      transaction_id: crypto.randomUUID(),
-      kiosk_id: kioskId,
-      meter_volume: numVolume,
-      recorded_at: new Date().toISOString(),
-    };
-
-    // Browser offline OR retries already exhausted: don't make the operator wait ~34 s again.
-    if (!isOnline || connection === 'dropped') {
-      await enqueueOffline(recordPayload, 'Offline Mode: Transaction saved to local queue.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      // submitTransactionLog should use fetchWithRetry internally (5 s timeout, 2/4/8 s backoff)
-      await submitTransactionLog(recordPayload);
-      syncDispatcher.markProcessed(recordPayload.transaction_id);
-      alert('Transaction submitted successfully!');
-    } catch (err) {
-      if (err instanceof DuplicateTransactionError) {
-        alert('Duplicate submission detected & rejected by server.');
-        return;
-      }
-      // Retries exhausted (or other failure): cache locally so nothing is lost.
-      await enqueueOffline(
-        recordPayload,
-        err instanceof ConnectionDroppedError
-          ? 'Connection dropped after retries: saved to local queue.'
-          : 'Server unreachable: Cached in local queue.'
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const banner = !isOnline
-    ? { label: 'Offline Mode', bg: '#f8d7da', fg: '#721c24' }
-    : connection === 'dropped'
-    ? { label: 'Connection Dropped', bg: '#f8d7da', fg: '#721c24' }
+  const status = !browserOnline
+    ? 'offline'
     : connection === 'retrying'
-    ? { label: 'Reconnecting…', bg: '#fff3cd', fg: '#856404' }
-    : { label: 'Online', bg: '#d4edda', fg: '#155724' };
+      ? 'checking'
+      : connection === 'dropped' || pingStatus === 'failed'
+        ? 'offline'
+        : pingStatus === 'ok'
+          ? 'online'
+          : 'checking';
+  const statusLabel =
+    status === 'online' ? 'Connected' : status === 'offline' ? 'Connection lost' : 'Checking server';
 
   return (
-    <main style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1>Prepaid Water Kiosk — Operator Node</h1>
+    <main className="kiosk-shell">
+      <header className="topbar">
+        <div className="brand" aria-label="Nam Sa-ard kiosk status">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="presentation">
+              <path d="M24 7C19 15 12 22 12 29a12 12 0 0 0 24 0C36 22 29 15 24 7Z" />
+              <path className="brand-wave" d="M13 32c4-3 7 3 11 0s7 3 11 0" />
+            </svg>
+          </span>
+          <span className="brand-name">namsa-ard</span>
+          <span className="brand-subtitle">น้ำสะอาด</span>
+        </div>
+        <div className={`status-pill status-${status}`} aria-live="polite">
+          <span className="status-dot" />
+          {statusLabel}
+        </div>
+      </header>
 
-      {/* Network Status Banner */}
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 6,
-          backgroundColor: banner.bg,
-          color: banner.fg,
-          marginBottom: 20,
-        }}
-      >
-        Status: <strong>{banner.label}</strong> | Pending Queue Items: {pendingCount} | Heartbeat: <strong>{pingStatus === 'ok' ? `Connected (${lastPingTime})` : pingStatus === 'failed' ? 'Failed' : 'Connecting...'}</strong>
-      </div>
+      <section className="dashboard">
+        <div className="intro">
+          <p className="eyebrow">KIOSK NETWORK MONITOR</p>
+          <h1>System status</h1>
+          <p className="intro-copy">This kiosk checks its connection to the water service automatically.</p>
+        </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          Water Meter Volume (Liters):
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            placeholder="e.g. 25.50"
-            value={volume || ''}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            required
-            style={{ padding: 8, fontSize: 16 }}
-          />
-        </label>
+        <div className="status-layout">
+          <section className={`connection-card connection-${status}`} aria-labelledby="connection-title">
+            <div className="connection-card-top">
+              <span className="card-kicker">SERVER CONNECTION</span>
+              <span className="heartbeat-tag">
+                <span className="pulse-dot" />
+                HEARTBEAT · 10 SEC
+              </span>
+            </div>
+            <div className="connection-main">
+              <div className="connection-copy">
+                <p className="connection-overline">Kiosk is</p>
+                <h2 id="connection-title">{statusLabel}</h2>
+                <p>
+                  {status === 'online'
+                    ? 'The server is responding and this kiosk is ready.'
+                    : status === 'offline'
+                      ? 'The server has not confirmed a heartbeat. Service may be unavailable.'
+                      : 'Waiting for the first heartbeat response.'}
+                </p>
+              </div>
+              <div className="water-orbit" aria-hidden="true">
+                <div className="water-orbit-inner">
+                  <svg viewBox="0 0 64 64">
+                    <path d="M32 8C25 20 16 28 16 39a16 16 0 0 0 32 0C48 28 39 20 32 8Z" />
+                    <path className="orbit-wave" d="M17 42c5-4 9 4 15 0s10 4 15 0" />
+                  </svg>
+                </div>
+                <span className="orbit-ring orbit-ring-one" />
+                <span className="orbit-ring orbit-ring-two" />
+              </div>
+            </div>
+            <div className="heartbeat-row">
+              <span className="heartbeat-wave" aria-hidden="true">
+                <svg viewBox="0 0 160 34" preserveAspectRatio="none">
+                  <path d="M0 18h38l8-9 10 18 12-25 11 18h18l8-8 9 8h46" />
+                </svg>
+              </span>
+              <span>{lastPingTime ? `Last response at ${lastPingTime}` : 'No heartbeat received yet'}</span>
+            </div>
+          </section>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{ padding: '10px 16px', fontSize: 16, cursor: submitting ? 'wait' : 'pointer' }}
-        >
-          {submitting ? (connection === 'retrying' ? 'Retrying…' : 'Submitting…') : 'Submit Entry'}
-        </button>
-      </form>
+          <aside className="details-card" aria-label="Kiosk details">
+            <div className="details-heading">
+              <span className="details-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.7 7.5 9.5 4.3-.8 7.5-4.9 7.5-9.5V6L12 3Z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </span>
+              <div>
+                <p className="card-kicker">DEVICE</p>
+                <h2>Connection details</h2>
+              </div>
+            </div>
+            <dl className="detail-list">
+              <div>
+                <dt>Kiosk ID</dt>
+                <dd>{kioskId}</dd>
+              </div>
+              <div>
+                <dt>Network</dt>
+                <dd>{browserOnline ? 'Available' : 'Offline'}</dd>
+              </div>
+              <div>
+                <dt>Heartbeat</dt>
+                <dd>{pingStatus === 'ok' ? 'Acknowledged' : pingStatus === 'failed' ? 'No response' : 'Waiting'}</dd>
+              </div>
+            </dl>
+            <p className="details-note">Status refreshes every 10 seconds. Keep this screen open to monitor the kiosk.</p>
+          </aside>
+        </div>
+      </section>
+      <footer className="page-footer">
+        <span>Nam Sa-ard · Water kiosk</span>
+        <span>Live service monitor</span>
+      </footer>
     </main>
   );
 }

@@ -1,0 +1,548 @@
+:root {
+  color-scheme: light;
+  --deep: #0b2530;
+  --spring: #0b6bc4;
+  --aqua: #4fb3ff;
+  --mist: #dceeff;
+  --ground: #f2f6f8;
+  --mint: #2bc48a;
+  --amber: #f5a524;
+  --coral: #c8352e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--deep);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+.kiosk-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  padding: 0 clamp(24px, 7vw, 108px);
+}
+
+.topbar {
+  display: flex;
+  min-height: 100px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(11, 37, 48, 0.1);
+}
+
+.brand {
+  display: grid;
+  grid-template-columns: 46px auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  color: var(--deep);
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 46px;
+  height: 34px;
+  grid-row: span 2;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--spring);
+}
+
+.brand-mark svg {
+  width: 29px;
+  fill: #fff;
+}
+
+.brand-wave {
+  fill: none;
+  stroke: var(--aqua);
+  stroke-linecap: round;
+  stroke-width: 4px;
+}
+
+.brand-name {
+  align-self: end;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.brand-subtitle {
+  align-self: start;
+  color: var(--spring);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #e5f5ee;
+  color: #116643;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-dot,
+.pulse-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgba(43, 196, 138, 0.15);
+}
+
+.status-offline {
+  background: #fdebe9;
+  color: var(--coral);
+}
+
+.status-offline .status-dot {
+  background: var(--coral);
+  box-shadow: 0 0 0 4px rgba(200, 53, 46, 0.12);
+}
+
+.status-checking {
+  background: #fff3d9;
+  color: #805006;
+}
+
+.status-checking .status-dot {
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.15);
+}
+
+.dashboard {
+  width: min(100%, 1120px);
+  flex: 1;
+  align-self: center;
+  padding: clamp(52px, 9vh, 104px) 0 72px;
+}
+
+.intro {
+  margin-bottom: 38px;
+}
+
+.eyebrow,
+.card-kicker {
+  margin: 0;
+  color: #607780;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.intro h1 {
+  margin: 9px 0 8px;
+  font-size: clamp(36px, 5vw, 54px);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+}
+
+.intro-copy {
+  margin: 0;
+  color: #607780;
+  font-size: 16px;
+}
+
+.status-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(270px, 0.85fr);
+  gap: 20px;
+}
+
+.connection-card {
+  min-height: 430px;
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+  border-radius: 30px;
+  background: var(--deep);
+  color: #fff;
+}
+
+.connection-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.connection-card .card-kicker {
+  color: #9db3bd;
+}
+
+.heartbeat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: rgba(220, 238, 255, 0.09);
+  color: #c2d2d9;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.connection-offline .pulse-dot {
+  background: #f26b64;
+  box-shadow: 0 0 0 4px rgba(242, 107, 100, 0.15);
+}
+
+.connection-checking .pulse-dot {
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.15);
+}
+
+.connection-main {
+  display: flex;
+  min-height: 280px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.connection-copy {
+  max-width: 380px;
+}
+
+.connection-overline {
+  margin: 0 0 6px;
+  color: #9db3bd;
+  font-size: 15px;
+}
+
+.connection-copy h2 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 4.3vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1.12;
+}
+
+.connection-copy > p:last-child {
+  max-width: 320px;
+  margin: 0;
+  color: #a8bbc3;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.water-orbit {
+  position: relative;
+  display: grid;
+  width: 184px;
+  height: 184px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.water-orbit-inner {
+  z-index: 1;
+  display: grid;
+  width: 126px;
+  height: 126px;
+  place-items: center;
+  border: 1px solid rgba(79, 179, 255, 0.25);
+  border-radius: 50%;
+  background: rgba(79, 179, 255, 0.12);
+}
+
+.water-orbit-inner svg {
+  width: 57px;
+  fill: var(--aqua);
+  transition: opacity 180ms ease;
+}
+
+.orbit-wave {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-width: 4px;
+}
+
+.connection-offline .water-orbit-inner svg {
+  opacity: 0.32;
+}
+
+.orbit-ring {
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(79, 179, 255, 0.2);
+  border-radius: 50%;
+}
+
+.orbit-ring-two {
+  inset: 0;
+  border-color: rgba(79, 179, 255, 0.12);
+}
+
+.heartbeat-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(220, 238, 255, 0.14);
+  color: #b4c6ce;
+  font-size: 13px;
+}
+
+.heartbeat-wave {
+  display: inline-block;
+  width: 112px;
+  height: 24px;
+  color: var(--aqua);
+}
+
+.heartbeat-wave svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.heartbeat-wave path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5px;
+}
+
+.details-card {
+  padding: 30px;
+  border: 1px solid rgba(11, 37, 48, 0.07);
+  border-radius: 30px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(11, 37, 48, 0.035);
+}
+
+.details-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.details-icon {
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--mist);
+  color: var(--spring);
+}
+
+.details-icon svg {
+  width: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8px;
+}
+
+.details-heading h2 {
+  margin: 3px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.detail-list {
+  margin: 8px 0 0;
+}
+
+.detail-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.detail-list dt {
+  color: #71838a;
+  font-size: 13px;
+}
+
+.detail-list dd {
+  margin: 0;
+  color: var(--deep);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.details-note {
+  margin: 20px 0 0;
+  color: #71838a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.page-footer {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(11, 37, 48, 0.1);
+  color: #71838a;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .kiosk-shell {
+    padding: 0 20px;
+  }
+
+  .topbar {
+    min-height: 78px;
+  }
+
+  .status-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .connection-card {
+    min-height: 370px;
+  }
+
+  .connection-main {
+    min-height: 235px;
+  }
+
+  .water-orbit {
+    width: 142px;
+    height: 142px;
+  }
+
+  .water-orbit-inner {
+    width: 100px;
+    height: 100px;
+  }
+
+  .water-orbit-inner svg {
+    width: 46px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand {
+    grid-template-columns: 38px auto;
+    column-gap: 9px;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 30px;
+  }
+
+  .brand-name {
+    font-size: 19px;
+  }
+
+  .status-pill {
+    min-height: 36px;
+    gap: 8px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+
+  .dashboard {
+    padding: 52px 0;
+  }
+
+  .connection-card {
+    min-height: 0;
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .connection-main {
+    min-height: 210px;
+  }
+
+  .water-orbit {
+    width: 90px;
+    height: 90px;
+  }
+
+  .water-orbit-inner {
+    width: 70px;
+    height: 70px;
+  }
+
+  .water-orbit-inner svg {
+    width: 36px;
+  }
+
+  .orbit-ring {
+    inset: 3px;
+  }
+
+  .orbit-ring-two {
+    inset: -4px;
+  }
+
+  .heartbeat-tag {
+    padding: 8px 10px;
+    font-size: 9px;
+  }
+
+  .heartbeat-row {
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .heartbeat-wave {
+    width: 75px;
+  }
+
+  .details-card {
+    padding: 24px;
+    border-radius: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

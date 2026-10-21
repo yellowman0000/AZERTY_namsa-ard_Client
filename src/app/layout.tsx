@@ -1,6 +1,8 @@
+import './globals.css';
+
 export const metadata = {
-  title: 'Prepaid Water Kiosk - Operator Node',
-  description: 'Nam Sa-ard Water Kiosk Client Operator Node',
+  title: 'Nam Sa-ard | Kiosk status',
+  description: 'Live server heartbeat and connection status for a Nam Sa-ard water kiosk.',
 };
 
 export default function RootLayout({
@@ -10,7 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
