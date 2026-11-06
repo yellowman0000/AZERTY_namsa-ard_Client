@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useKioskHeartbeat } from '../lib/heartbeat';
 import { connectionStatus } from '../lib/http';
@@ -55,14 +54,9 @@ export default function KioskDashboard() {
           <span className="brand-name">namsa-ard</span>
           <span className="brand-subtitle">น้ำสะอาด</span>
         </div>
-        <div className="topbar-actions">
-          <Link className="nav-link" href="/manager">
-            Historical logs
-          </Link>
-          <div className={`status-pill status-${status}`} aria-live="polite">
-            <span className="status-dot" />
-            {statusLabel}
-          </div>
+        <div className={`status-pill status-${status}`} aria-live="polite">
+          <span className="status-dot" />
+          {statusLabel}
         </div>
       </header>
 
