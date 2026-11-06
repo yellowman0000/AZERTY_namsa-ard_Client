@@ -4,6 +4,6 @@
     "types": ["bun"],
     "plugins": []
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx"],
   "exclude": []
 }
