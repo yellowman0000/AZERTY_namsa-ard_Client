@@ -1,0 +1,202 @@
+.feed-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.feed-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 30px;
+  border: 1px solid rgba(11, 37, 48, 0.07);
+  border-radius: 30px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(11, 37, 48, 0.035);
+}
+
+.feed-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.feed-heading h2 {
+  margin: 3px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.feed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e5f5ee;
+  color: #116643;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.feed-chip-connecting,
+.feed-chip-reconnecting {
+  background: #fff3d9;
+  color: #805006;
+}
+
+.feed-chip-connecting .status-dot,
+.feed-chip-reconnecting .status-dot {
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.15);
+}
+
+.feed-chip-idle {
+  background: #edf1f2;
+  color: #71838a;
+}
+
+.feed-chip-idle .status-dot {
+  background: #9db3bd;
+  box-shadow: none;
+}
+
+.feed-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.feed-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--mist);
+  color: var(--spring);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.feed-row-heartbeat .feed-mark {
+  background: #e5f5ee;
+  color: #116643;
+}
+
+.feed-info {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.feed-info strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-info small,
+.feed-note {
+  color: #71838a;
+  font-size: 12px;
+}
+
+.feed-kind {
+  color: #71838a;
+  font-size: 12px;
+}
+
+.feed-note {
+  margin: 14px 0 0;
+}
+
+.feed-empty {
+  margin: 18px 0;
+  color: #71838a;
+  font-size: 13px;
+}
+
+.feed-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.feed-scroll:focus-visible {
+  outline: 2px solid var(--aqua);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.feed-sentinel {
+  height: 1px;
+}
+
+.feed-more,
+.feed-error button {
+  min-height: 40px;
+  margin: 14px 0 4px;
+  padding: 0 18px;
+  border: 1px solid var(--spring);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--spring);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feed-more:hover,
+.feed-error button:hover {
+  background: var(--mist);
+}
+
+.feed-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fdebe9;
+  color: var(--coral);
+  font-size: 13px;
+}
+
+.feed-error button {
+  margin: 0;
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.feed-error button:hover {
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .feed-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-card {
+    padding: 22px;
+  }
+}

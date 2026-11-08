@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useKioskHeartbeat } from '../lib/heartbeat';
 import { connectionStatus } from '../lib/http';
+import LogFeed from './LogFeed';
 
 const kioskId = process.env.NEXT_PUBLIC_KIOSK_ID || 'KIOSK-001';
 
@@ -139,6 +140,8 @@ export default function KioskDashboard() {
             <p className="details-note">Status refreshes every 10 seconds. Keep this screen open to monitor the kiosk.</p>
           </aside>
         </div>
+
+        <LogFeed kioskId={kioskId} />
       </section>
       <footer className="page-footer">
         <span>Nam Sa-ard · Water kiosk</span>
