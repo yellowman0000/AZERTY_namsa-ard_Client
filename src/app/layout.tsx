@@ -1,4 +1,5 @@
 import './globals.css';
+import MockDataHost from './MockDataHost';
 
 export const metadata = {
   title: 'Nam Sa-ard | Kiosk status',
@@ -12,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <MockDataHost />
+        {children}
+      </body>
     </html>
   );
 }

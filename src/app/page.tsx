@@ -3,6 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useKioskHeartbeat } from '../lib/heartbeat';
 import { connectionStatus } from '../lib/http';
+import { rowsOf, selectKioskStatus } from '../lib/mockData/selectors';
+import { useMockData } from '../lib/mockData/useMockData';
 import LogFeed from './LogFeed';
 
 const kioskId = process.env.NEXT_PUBLIC_KIOSK_ID || 'KIOSK-001';
@@ -18,6 +20,18 @@ export default function KioskDashboard() {
     kioskId,
     intervalMs: 10000,
   });
+  const mock = useMockData();
+  const mockActive = mock.active;
+
+  // Fixtures are derived during render. The real heartbeat keeps pinging, it is
+  // just not shown while the demo tool is on; turning mock data off restores the
+  // live values immediately with no extra work.
+  const mockStatus = mockActive ? selectKioskStatus(rowsOf(mock, 'kioskStatus')[0]) : null;
+  const shownKioskId = mockStatus?.kioskId || kioskId;
+  const shownBrowserOnline = mockStatus ? mockStatus.browserOnline : browserOnline;
+  const shownConnection = mockStatus ? mockStatus.connection : connection;
+  const shownPingStatus = mockStatus ? mockStatus.pingStatus : pingStatus;
+  const shownLastPingTime = mockStatus ? mockStatus.lastPingTime : lastPingTime;
 
   useEffect(() => {
     const updateNetworkStatus = () => setBrowserOnline(navigator.onLine);
@@ -30,13 +44,13 @@ export default function KioskDashboard() {
     };
   }, []);
 
-  const status = !browserOnline
+  const status = !shownBrowserOnline
     ? 'offline'
-    : connection === 'retrying'
+    : shownConnection === 'retrying'
       ? 'checking'
-      : connection === 'dropped' || pingStatus === 'failed'
+      : shownConnection === 'dropped' || shownPingStatus === 'failed'
         ? 'offline'
-        : pingStatus === 'ok'
+        : shownPingStatus === 'ok'
           ? 'online'
           : 'checking';
   const statusLabel =
@@ -106,7 +120,7 @@ export default function KioskDashboard() {
                   <path d="M0 18h38l8-9 10 18 12-25 11 18h18l8-8 9 8h46" />
                 </svg>
               </span>
-              <span>{lastPingTime ? `Last response at ${lastPingTime}` : 'No heartbeat received yet'}</span>
+              <span>{shownLastPingTime ? `Last response at ${shownLastPingTime}` : 'No heartbeat received yet'}</span>
             </div>
           </section>
 
@@ -126,22 +140,22 @@ export default function KioskDashboard() {
             <dl className="detail-list">
               <div>
                 <dt>Kiosk ID</dt>
-                <dd>{kioskId}</dd>
+                <dd>{shownKioskId}</dd>
               </div>
               <div>
                 <dt>Network</dt>
-                <dd>{browserOnline ? 'Available' : 'Offline'}</dd>
+                <dd>{shownBrowserOnline ? 'Available' : 'Offline'}</dd>
               </div>
               <div>
                 <dt>Heartbeat</dt>
-                <dd>{pingStatus === 'ok' ? 'Acknowledged' : pingStatus === 'failed' ? 'No response' : 'Waiting'}</dd>
+                <dd>{shownPingStatus === 'ok' ? 'Acknowledged' : shownPingStatus === 'failed' ? 'No response' : 'Waiting'}</dd>
               </div>
             </dl>
             <p className="details-note">Status refreshes every 10 seconds. Keep this screen open to monitor the kiosk.</p>
           </aside>
         </div>
 
-        <LogFeed kioskId={kioskId} />
+        <LogFeed kioskId={shownKioskId} />
       </section>
       <footer className="page-footer">
         <span>Nam Sa-ard · Water kiosk</span>

@@ -5,8 +5,11 @@ import { logStore, type ArchiveSlice, type LiveSlice, type Slice } from './store
 import { createArchiveLoader, type ArchiveLoader } from './archiveLoader';
 import { startLiveFeed } from './liveFeed';
 
-function useSlice<T>(slice: Slice<T>, serverSnapshot: T): T {
-  return useSyncExternalStore(slice.subscribe, slice.get, () => serverSnapshot);
+function useSlice<T>(slice: Slice<T>, serverSnapshot: T, enabled: boolean): T {
+  const current = useSyncExternalStore(slice.subscribe, slice.get, () => serverSnapshot);
+  // While the mock-data tool is on, the feed is showing fixtures: hand back the
+  // deterministic empty slice so nothing from the real transport can leak in.
+  return enabled ? current : serverSnapshot;
 }
 
 const SERVER_LIVE: LiveSlice = { entries: [], status: 'idle', received: 0 };
@@ -19,25 +22,46 @@ const SERVER_ARCHIVE: ArchiveSlice = {
   loadedOnce: false,
 };
 
-export const useLiveSlice = () => useSlice(logStore.live, SERVER_LIVE);
-export const useArchiveSlice = () => useSlice(logStore.archive, SERVER_ARCHIVE);
+/** A loader that does nothing, used while mock data is on. */
+const IDLE_LOADER: ArchiveLoader = {
+  loadMore: () => Promise.resolve(),
+  abort: () => {},
+  reset: () => {},
+};
 
-/** Opens the real-time stream for the lifetime of the component. */
-export function useLiveFeed(kioskId: string) {
+export const useLiveSlice = (enabled = true) =>
+  useSlice(logStore.live, SERVER_LIVE, enabled);
+export const useArchiveSlice = (enabled = true) =>
+  useSlice(logStore.archive, SERVER_ARCHIVE, enabled);
+
+/**
+ * Opens the real-time stream for the lifetime of the component.
+ *
+ * Pass `enabled = false` while the mock-data tool is showing fixtures: the
+ * EventSource is never created, and stopping it steps the slice back to `idle`.
+ */
+export function useLiveFeed(kioskId: string, enabled = true) {
   useEffect(() => {
-    if (!kioskId) return;
+    if (!kioskId || !enabled) return;
     return startLiveFeed({ kioskId });
-  }, [kioskId]);
+  }, [kioskId, enabled]);
 }
 
-/** Owns an archive loader, loads the first page on mount and cancels on unmount. */
-export function useArchiveLoader(kioskId: string): ArchiveLoader {
+/**
+ * Owns an archive loader, loads the first page on mount and cancels on unmount.
+ *
+ * Pass `enabled = false` while the mock-data tool is showing fixtures: nothing is
+ * fetched, and the returned loader is a no-op so "Try again" / "Load more" cannot
+ * start a request either.
+ */
+export function useArchiveLoader(kioskId: string, enabled = true): ArchiveLoader {
   const [loader] = useState(() => createArchiveLoader({ kioskId }));
 
   useEffect(() => {
+    if (!enabled) return;
     void loader.loadMore();
     return () => loader.abort();
-  }, [loader]);
+  }, [loader, enabled]);
 
-  return loader;
+  return enabled ? loader : IDLE_LOADER;
 }

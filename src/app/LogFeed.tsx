@@ -6,8 +6,16 @@ import {
   useArchiveSlice,
   useLiveFeed,
   useLiveSlice,
+  type ArchiveSlice,
   type FeedEntry,
+  type LiveSlice,
 } from '../lib/logFeed';
+import {
+  rowsOf,
+  selectArchiveFeed,
+  selectLiveFeed,
+} from '../lib/mockData/selectors';
+import { useMockData } from '../lib/mockData/useMockData';
 import './logFeed.css';
 const LIVE_VISIBLE = 12;
 
@@ -42,10 +50,28 @@ function EntryRow({ entry }: { entry: FeedEntry }) {
 }
 
 export default function LogFeed({ kioskId }: { kioskId: string }) {
-  useLiveFeed(kioskId);
-  const live = useLiveSlice();
-  const archive = useArchiveSlice();
-  const loader = useArchiveLoader(kioskId);
+  const mock = useMockData();
+  const mockActive = mock.active;
+  // While fixtures are on, both real transports are held back: no EventSource and
+  // no archive request. Turning mock data off re-enables them unchanged.
+  const transportsEnabled = !mockActive;
+
+  useLiveFeed(kioskId, transportsEnabled);
+  const liveSlice = useLiveSlice(transportsEnabled);
+  const archiveSlice = useArchiveSlice(transportsEnabled);
+  const loader = useArchiveLoader(kioskId, transportsEnabled);
+
+  // Fixtures are derived during render, so toggling mock data on never starts a
+  // fetch and editing a fixture row never re-runs an effect — only the slices do.
+  const fixtureLive: LiveSlice | null = mockActive
+    ? selectLiveFeed(rowsOf(mock, 'live'), rowsOf(mock, 'liveStatus')[0])
+    : null;
+  const live = fixtureLive ?? liveSlice;
+
+  const fixtureArchive: ArchiveSlice | null = mockActive
+    ? selectArchiveFeed(rowsOf(mock, 'archive'), rowsOf(mock, 'archiveState')[0])
+    : null;
+  const archive = fixtureArchive ?? archiveSlice;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -54,7 +80,10 @@ export default function LogFeed({ kioskId }: { kioskId: string }) {
   // view, request the next page. The observer is re-created after every page so a list
   // that is still too short to scroll keeps loading. After an error it stays quiet
   // (no retry loop); the "Try again" button resumes loading.
-  const canAutoLoad = archive.hasMore && archive.status === 'idle' && archive.loadedOnce;
+  // Mocked archives always report `hasMore: false`, so the sentinel stays inert on top
+  // of the transport being disabled.
+  const canAutoLoad =
+    transportsEnabled && archive.hasMore && archive.status === 'idle' && archive.loadedOnce;
   useEffect(() => {
     const sentinel = sentinelRef.current;
     const root = scrollRef.current;
